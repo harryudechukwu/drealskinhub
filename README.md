@@ -52,6 +52,8 @@ Sender and Turso adapters are coded and tested with local doubles; real credenti
    | `EMAIL_ENABLED` | `false` until Sender is configured |
 
 4. Deploy the preview. The API creates its tables and illustrative starting content once. It never re-seeds an existing store.
+
+   The storefront cannot load without `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`: the hosted API returns HTTP 503 until both are set. Add them before sharing the Netlify URL.
 5. Open `/admin`, enter your setup token, and create your administrator account. Remove `ADMIN_SETUP_TOKEN` from Netlify after successful setup. The database enforces a single initial administrator, and the setup endpoint closes once one exists.
 6. Upload product media and the guide from the admin. On Netlify, uploaded files persist in **Netlify Blobs**; locally they stay on disk. Turso holds the structured store data. Files must be JPG, PNG, WebP, or PDF, at most 3 MB each.
 
