@@ -165,8 +165,7 @@ try{
         const productText=await evaluate(`(()=>{const card=document.querySelector('#home-products .product-card'),box=selector=>card.querySelector(selector).getBoundingClientRect();return {brandToTitle:box('h3').top-box('.product-brand').bottom,titleToSize:box('.product-size').top-box('h3').bottom,sizeToPrice:box('.product-price').top-box('.product-size').bottom,fontLoaded:document.fonts.check('400 16px "DM Sans"')};})()`);
         if(!productText.fontLoaded||productText.brandToTitle>10||productText.titleToSize>10||productText.sizeToPrice>16)throw new Error(`Product card text is too spread out or DM Sans did not load at ${width}px: ${JSON.stringify(productText)}`);
         const hero=await evaluate(`(()=>{const r=document.querySelector('.hero').getBoundingClientRect(),t=document.querySelector('.hero-copy h1').getBoundingClientRect(),primary=document.querySelector('.hero-buttons .button').getBoundingClientRect(),secondary=document.querySelector('.hero-buttons .text-link').getBoundingClientRect(),copy=document.querySelector('.consultation-copy'),cta=copy.querySelector('.button'),style=getComputedStyle(copy);return {left:r.left,right:r.right,height:r.height,headerHeight:document.querySelector('#site-header').offsetHeight,contentWidth:document.documentElement.clientWidth,textLeft:t.left,secondStyle:getComputedStyle(document.querySelector('.hero-title-second')).fontStyle,primaryMiddle:(primary.top+primary.bottom)/2,secondaryMiddle:(secondary.top+secondary.bottom)/2,consultationButton:cta.getBoundingClientRect().width,consultationContent:copy.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),consultationIcons:copy.querySelectorAll('.check-list .icon circle').length,previewStrip:!!document.querySelector('.preview-strip')};})()`);
-        if(Math.abs(hero.left)>1||Math.abs(hero.right-hero.contentWidth)>1||hero.height<height-hero.headerHeight-1||hero.secondStyle!=='normal'||hero.previewStrip)throw new Error(`Hero sizing, heading, or header is inconsistent at ${width}px: ${JSON.stringify(hero)}`);
-        if(width>320&&Math.abs(hero.height+hero.headerHeight-height)>2)throw new Error(`Hero and navigation do not fit one viewport at ${width}px: ${JSON.stringify(hero)}`);
+        if(Math.abs(hero.left)>1||Math.abs(hero.right-hero.contentWidth)>1||hero.height<height-1||hero.secondStyle!=='normal'||hero.previewStrip)throw new Error(`Hero sizing or heading is inconsistent at ${width}px: ${JSON.stringify(hero)}`);
         if(width>=1440&&Math.abs(hero.primaryMiddle-hero.secondaryMiddle)>2)throw new Error(`Hero actions do not align at ${width}px: ${JSON.stringify(hero)}`);
         if(hero.consultationIcons<3||hero.consultationButton<hero.consultationContent-2)throw new Error(`Consultation list or full-width action is inconsistent at ${width}px: ${JSON.stringify(hero)}`);
         const spacing=await evaluate(`(()=>{
@@ -175,7 +174,7 @@ try{
           const newsletter=document.querySelector('.newsletter-inner'),n=newsletter.getBoundingClientRect(),ns=getComputedStyle(newsletter);
           return {contentLeft:r.left+parseFloat(style.paddingLeft),contentRight:r.right-parseFloat(style.paddingRight),stage:bounds('.hero-stage'),values:bounds('.values-inner'),consultation:bounds('.consultation-banner'),guide:bounds('.guide-section'),newsletter:{left:n.left+parseFloat(ns.paddingLeft),right:n.right-parseFloat(ns.paddingRight)},footer:bounds('.footer-top'),caption:document.querySelector('.hero-photo-caption')?.textContent.trim()};
         })()`);
-        if(!spacing.caption?.includes('Care, with you in mind.'))throw new Error('Hero photo caption is missing.');
+        if(!await evaluate("[...document.querySelectorAll('.hero-cutout')].length===2 && [...document.querySelectorAll('.hero-cutout')].every(img=>img.complete&&img.naturalWidth>0)"))throw new Error('The two hero product cutouts did not load.');
         if(Math.abs(hero.textLeft-spacing.contentLeft)>2)throw new Error(`Hero text does not align with section content: ${JSON.stringify({hero,spacing})}`);
         for(const name of ['stage','values','consultation','guide','newsletter','footer']){
           const edges=spacing[name];
@@ -228,6 +227,24 @@ try{
       }
       if(label==='shop'&&[390,320].includes(width))await screenshot(`shop-${width}`);
     }
+  }
+  if(heroOnly){
+    await viewport(390,844);
+    await navigate('/admin',"!!document.querySelector('.admin-auth')");
+    const setup=await evaluate(`fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Visual Reviewer',email:'visual-admin@example.test',password:'Isolated visual check only 2026'})}).then(r=>r.json())`);
+    if(!setup.user)throw new Error('Isolated admin setup failed: '+JSON.stringify(setup));
+    const sessionCheck=await evaluate("fetch('/api/session').then(r=>r.json())");
+    if(sessionCheck.user?.role!=='admin')throw new Error('Isolated admin session was not retained: '+JSON.stringify(sessionCheck));
+    await navigate('/admin?visual=1#settings',"!!document.querySelector('.settings-form')");
+    await click('[data-settings="homepage"]');
+    await inspect('homepage-admin',390,844);
+    await screenshot('homepage-admin-390');
+    await click('[data-action="add-home-section"]');
+    await evaluate(`(()=>{const row=document.querySelector('#homepage-section-list [data-home-collection]:last-child');row.querySelector('[name="collectionTitle"]').value='New arrivals';row.querySelector('[data-product-id="daily-cleanser"]').checked=true;row.querySelector('[data-action="move-home-section"][data-direction="up"]').click();document.querySelector('.settings-form').requestSubmit();})()`);
+    await waitFor("document.querySelector('#toast')?.textContent.includes('Store settings saved')");
+    await navigate('/',"!!document.querySelector('.home-collection-section h2')");
+    if(!await evaluate("[...document.querySelectorAll('.home-collection-section h2')].some(h=>h.textContent==='New arrivals')"))throw new Error('The new homepage collection did not appear after saving.');
+    report.interactions.push('Phone admin added a product section, moved it, saved it, and it appeared on the storefront.');
   }
   if(!heroOnly){
   await viewport(320,740);await navigate('/shop',"!!document.querySelector('.filter-details')");

@@ -66,10 +66,10 @@ const grid=products=>`<div class="product-grid">${products.map(productCard).join
 function sectionHeading(title,href,label='Explore the collection') {return `<div class="section-heading"><div><h2>${title}</h2></div>${href?`<a href="${href}" class="text-link">${label} ${icon('arrow')}</a>`:''}</div>`;}
 function articleCard(a){const photo={routine:'care',consult:'routine',shelf:'serum'}[a.art]||'care';return `<article class="journal-card"><a class="journal-art" href="/journal/${e(a.id)}" aria-label="Read ${e(a.title)}">${photograph(photo,'journal-photo')}<div class="journal-overlay"><h3>${e(a.title)}</h3><div class="journal-meta"><span class="journal-category">${e(a.category)}</span><span class="journal-action">Read story ${icon('arrow')}</span></div></div></a></article>`;}
 function guideBlock(){const s=data.settings;return `<section class="guide-section"><div class="guide-cover"><span>DrealSkinhub</span><span class="guide-cover-title">A little guide.<br>A little clarity.</span></div><div class="guide-copy"><h2>${e(s.guideTitle)}</h2><p>${e(s.guideText)}</p><form data-form="subscribe"><input type="hidden" name="source" value="guide"><div class="form-row">${field('First name','name','','text','required autocomplete="given-name"')}${field('Email address','email','','email','required autocomplete="email"')}</div><label class="check"><input type="checkbox" name="consent" required> Send me the guide and skincare updates. I can unsubscribe anytime.</label><button class="button" type="submit">A little clarity, please ${icon('arrow')}</button>${errorBox}<div class="form-success" role="status"></div></form></div></section>`;}
-function home() {
+function legacyHome() {
   const s=data.settings;
   return `<section class="hero"><div class="hero-inner"><div class="hero-copy"><h1>${e(s.heroTitle).split('\n').map((line,i)=>i?`<span class="hero-title-second">${line}</span>`:line).join('<br>')}</h1><p>${e(s.heroText)}</p><div class="hero-buttons">${button(e(s.heroPrimary),'/shop')}<a class="text-link" href="/consultations">${e(s.heroSecondary)} ${icon('arrow')}</a></div></div>
-  <div class="hero-stage has-image"><img class="hero-image" src="${e(s.heroImage||photos.hero.src)}" alt="${e(s.heroImage?'The DrealSkinhub skincare collection':photos.hero.alt)}" width="1280" height="1920" fetchpriority="high"><div class="hero-photo-caption"><span>YOUR SKIN MATTERS HERE</span><strong>Care, with you in mind.</strong></div></div></div></section>
+  <div class="hero-stage hero-product-stage"></div></div></section>
   <div class="values-strip"><div class="values-inner"><span>${icon('shield')} Authentic products</span><span>${icon('chat')} Honest guidance</span><span>${icon('leaf')} Care for every skin</span><span>${icon('bag')} Curated essentials</span></div></div>
   ${s.sections.categories?`<section class="section categories-section">${sectionHeading('Good care starts here.','/shop','Shop all skincare')}<div class="category-grid">${s.categories.slice(0,6).map((c,i)=>{const p=data.products.find(p=>p.category===c)||{name:c,brand:'Everyday care',art:['cleanser','jar','tube','dropper','bottle','jar'][i],tone:['sage','peach','butter','rose','sage','peach'][i]};return `<a href="${linkShop('category',c)}" class="category-card"><div class="category-image">${categoryPhotos[c]&&!p.images?.length?photograph(categoryPhotos[c]):art(p)}</div><span>${e(c)} ${icon('arrow')}</span></a>`;}).join('')}</div></section>`:''}
   ${s.sections.featured?`<section class="section featured-section">${sectionHeading('Meet your everyday essentials.','/shop?featured=true','Shop the favourites')}<div class="collection-tabs" role="group" aria-label="Featured collection"><button class="active" data-action="collection" data-collection="featured" aria-pressed="true">The favourites</button><button data-action="collection" data-collection="new" aria-pressed="false">Fresh on the shelf</button></div><div id="home-products">${grid(data.products.filter(p=>p.featured).slice(0,4))}</div></section>`:''}
@@ -79,6 +79,30 @@ function home() {
   ${s.sections.guide?guideBlock():''}
   ${s.sections.reviews&&data.reviews.length?`<section class="section">${sectionHeading('Care that feels personal.')}<div class="review-grid">${data.reviews.map(r=>`<blockquote><span aria-label="${r.rating} out of 5">${r.rating}/5</span><p>“${e(r.quote)}”</p><cite>${e(r.name)}</cite></blockquote>`).join('')}</div></section>`:''}
   ${s.sections.journal?`<section class="section">${sectionHeading('Notes from the skin journal.','/journal','Read the journal')}<div class="journal-grid">${data.articles.slice(0,3).map(a=>articleCard(a)).join('')}</div></section>`:''}`;
+}
+const starterHomeCollections=[{id:'best-sellers',title:'Best sellers',productIds:['clarifying-serum','body-lotion','soft-headband','even-tone'],enabled:true}];
+const starterSectionOrder=['categories','featured','best-sellers','consultation','concerns','brands','guide','reviews','journal'];
+function home() {
+  const s=data.settings,frame=document.createElement('div');
+  frame.innerHTML=legacyHome();
+  const hero=frame.querySelector('.hero'),stage=hero.querySelector('.hero-stage');
+  const title=s.heroTitle==='A little care.\nA lot of confidence.'?'Glow essentials,\ncurated for you.':s.heroTitle;
+  const intro=s.heroText==='Your skin is uniquely yours. Find authentic skincare and thoughtful guidance for every step of your journey.'?'Thoughtfully chosen skincare for every step of your routine.':s.heroText;
+  hero.classList.add('hero-editorial');
+  hero.querySelector('h1').innerHTML=e(title).split('\n').map((line,i)=>i?`<span class="hero-title-second">${line}</span>`:line).join('<br> ');
+  hero.querySelector('.hero-copy > p').textContent=intro;
+  if(s.heroImage){stage.classList.add('has-image');stage.classList.remove('hero-product-stage');stage.innerHTML=`<img class="hero-image" src="${e(s.heroImage)}" alt="The DrealSkinhub skincare collection" width="1280" height="1920" fetchpriority="high">`;}
+  else stage.innerHTML=`<div class="hero-arch hero-arch-one"></div><div class="hero-arch hero-arch-two"></div><div class="hero-plinth"></div><img class="hero-cutout hero-cutout-one" src="${e(s.heroProductOne||'/assets/photos/hero-illiyoon-cutout.png')}" alt="Illiyoon Ceramide Ato Concentrate Cream" width="1075" height="1463" fetchpriority="high"><img class="hero-cutout hero-cutout-two" src="${e(s.heroProductTwo||'/assets/photos/hero-korean-skin-cutout.png')}" alt="Advanced Korean Skin Bright and Moisture Body Lotion" width="1254" height="1254" fetchpriority="high">`;
+  const builtins={categories:frame.querySelector('.categories-section'),featured:frame.querySelector('.featured-section'),consultation:frame.querySelector('.consultation-banner'),concerns:frame.querySelector('.concern-section'),brands:frame.querySelector('.brand-strip'),guide:frame.querySelector('.guide-section'),reviews:frame.querySelector('.review-grid')?.closest('section'),journal:frame.querySelector('.journal-grid')?.closest('section')};
+  const collections=s.homeCollections||starterHomeCollections,order=s.sectionOrder||starterSectionOrder;
+  const section=key=>{
+    if(builtins[key])return builtins[key].outerHTML;
+    const collection=collections.find(c=>c.id===key);
+    if(!collection?.enabled)return '';
+    const selected=(collection.productIds||[]).map(id=>product(id)).filter(Boolean);
+    return selected.length?`<section class="section home-collection-section">${sectionHeading(e(collection.title),'/shop','Shop all products')}${grid(selected)}</section>`:'';
+  };
+  return hero.outerHTML+frame.querySelector('.values-strip').outerHTML+order.filter((key,i)=>order.indexOf(key)===i).map(section).join('');
 }
 function shop() {
   const q=new URLSearchParams(location.search),s=data.settings,search=q.get('search')||'';

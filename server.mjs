@@ -112,12 +112,31 @@ export async function createApplication({databasePath=process.env.DATABASE_PATH|
     const current=(await get('settings','main')), next={...current};
     for(const k of ['storeName','tagline','announcement','heroEyebrow','heroTitle','heroText','heroPrimary','heroSecondary','aboutTitle','aboutText','consultationTitle','consultationText','consultationIncludes','guideTitle','guideText','supportEmail','supportPhone','whatsapp','address','hours','seoDescription'])if(k in b)next[k]=str(b[k],k.endsWith('Text')||k==='consultationIncludes'?8000:1000);
     for(const k of ['heroImage','consultationImage','guideUrl'])if(k in b)next[k]=safeUrl(b[k],{localOnly:true});
+    const bundledHeroAssets={heroProductOne:'/assets/photos/hero-illiyoon-cutout.png',heroProductTwo:'/assets/photos/hero-korean-skin-cutout.png'};
+    for(const [key,asset] of Object.entries(bundledHeroAssets))if(key in b)next[key]=b[key]===asset?asset:safeUrl(b[key],{localOnly:true});
     if('instagram' in b)next.instagram=safeUrl(b.instagram);
     if('supportEmail' in b&&b.supportEmail)next.supportEmail=email(b.supportEmail);
     for(const k of ['consultationPrice','freeDeliveryThreshold'])if(k in b)next[k]=number(b[k],k);
     for(const k of ['consultationDuration','lowStockThreshold'])if(k in b)next[k]=whole(b[k],k,1,1000);
     for(const k of ['categories','concerns','brands'])if(k in b){if(!Array.isArray(b[k])||b[k].length>100)fail('Invalid collection list.');next[k]=[...new Set(b[k].map(x=>str(x,100)).filter(Boolean))];}
     if('sections' in b)for(const k of Object.keys(current.sections))if(k in b.sections)next.sections={...next.sections,[k]:!!b.sections[k]};
+    if('homeCollections' in b){
+      if(!Array.isArray(b.homeCollections)||b.homeCollections.length>12)fail('Add up to 12 homepage collections.');
+      const productIds=new Set((await all('products')).map(p=>p.id));
+      next.homeCollections=b.homeCollections.map(c=>{
+        const id=str(c.id,80),title=required(c.title,'Collection title',100);
+        if(!/^[a-z0-9-]+$/.test(id)||!Array.isArray(c.productIds)||c.productIds.length>12)fail('Invalid homepage collection.');
+        const chosen=[...new Set(c.productIds.map(x=>str(x,100)))];
+        if(chosen.some(id=>!productIds.has(id)))fail('A selected collection product no longer exists.');
+        return {id,title,productIds:chosen,enabled:!!c.enabled};
+      });
+      if(new Set(next.homeCollections.map(c=>c.id)).size!==next.homeCollections.length||next.homeCollections.some(c=>c.id in next.sections))fail('Homepage collection names must be unique.');
+    }
+    if('sectionOrder' in b){
+      const allowed=[...Object.keys(next.sections),...(next.homeCollections||[]).map(c=>c.id)];
+      if(!Array.isArray(b.sectionOrder)||b.sectionOrder.length!==allowed.length||new Set(b.sectionOrder).size!==allowed.length||b.sectionOrder.some(id=>!allowed.includes(id)))fail('Invalid homepage section order.');
+      next.sectionOrder=b.sectionOrder;
+    }
     if('deliveryZones' in b){if(!Array.isArray(b.deliveryZones)||!b.deliveryZones.length||b.deliveryZones.length>50)fail('Add between 1 and 50 delivery areas.');next.deliveryZones=b.deliveryZones.map(z=>({id:str(z.id)||randomUUID(),name:required(z.name,'Delivery area'),fee:number(z.fee,'Delivery fee')}));if(new Set(next.deliveryZones.map(z=>z.id)).size!==next.deliveryZones.length)fail('Delivery areas must have unique IDs.');}
     if('consultationSlots' in b){if(!Array.isArray(b.consultationSlots)||b.consultationSlots.length>500)fail('Invalid appointment slots.');next.consultationSlots=[...new Set(b.consultationSlots.map(s=>{const d=new Date(s);if(Number.isNaN(+d))fail('Invalid appointment date.');return d.toISOString();}))].sort();}
     if('consultationSlots' in b||'consultationDuration' in b)for(let i=1;i<next.consultationSlots.length;i++)if(Date.parse(next.consultationSlots[i])-Date.parse(next.consultationSlots[i-1])<next.consultationDuration*60000)fail('Appointments must be spaced at least one consultation duration apart.');

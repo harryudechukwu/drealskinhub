@@ -23,6 +23,23 @@ test('cross-origin writes and customer admin access are blocked',async()=>{
   assert.equal((await request('/api/admin/settings',{storeName:'Hijacked'},'PUT',adminCookie,{Origin:'https://example.org'})).status,403);
   const r=await request('/api/auth/register',{name:'Ada',email:'ada@example.test',password:'a secure customer password',role:'admin'});assert.equal(r.status,200);customerCookie=r.cookie;assert.equal(r.data.user.role,'customer');assert.equal((await request('/api/admin/products',undefined,'GET',customerCookie)).status,403);
 });
+test('admin can curate and reorder homepage product sections',async()=>{
+  const keys=Object.keys((await request('/api/store')).data.settings.sections);
+  const homeCollections=[{id:'best-sellers',title:'Best sellers',productIds:['body-lotion','daily-cleanser'],enabled:true}];
+  const sectionOrder=['best-sellers',...keys];
+  const heroProductOne='/assets/photos/hero-illiyoon-cutout.png',heroProductTwo='/assets/photos/hero-korean-skin-cutout.png';
+  const saved=await request('/api/admin/settings',{homeCollections,sectionOrder,heroProductOne,heroProductTwo},'PUT',adminCookie);
+  assert.equal(saved.status,200);
+  assert.deepEqual(saved.data.homeCollections,homeCollections);
+  assert.deepEqual(saved.data.sectionOrder,sectionOrder);
+  assert.equal(saved.data.heroProductOne,heroProductOne);
+  assert.equal(saved.data.heroProductTwo,heroProductTwo);
+  const storefront=(await request('/api/store')).data.settings;
+  assert.deepEqual(storefront.homeCollections,homeCollections);
+  assert.deepEqual(storefront.sectionOrder,sectionOrder);
+  assert.equal((await request('/api/admin/settings',{homeCollections,sectionOrder:['best-sellers','best-sellers',...keys.slice(1)]},'PUT',adminCookie)).status,400);
+  assert.equal((await request('/api/admin/settings',{homeCollections:[{...homeCollections[0],productIds:['unknown-product']}],sectionOrder},'PUT',adminCookie)).status,400);
+});
 test('pricing is server-authoritative, inventory is atomic, and retries are idempotent',async()=>{
   const items=[{id:'daily-cleanser',quantity:2,price:1}],quote=await request('/api/quote',{items,zone:'lagos'});assert.equal(quote.data.subtotal,25000);assert.equal(quote.data.total,28000);
   const body={items,zone:'lagos',name:'Preview Customer',email:'guest@example.test',phone:'08000000000',address:'Preview street',city:'Lagos',previewAcknowledged:true,idempotencyKey:'test-checkout-one',expectedTotal:28000};
