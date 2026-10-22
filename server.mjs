@@ -112,7 +112,7 @@ export async function createApplication({databasePath=process.env.DATABASE_PATH|
     const current=(await get('settings','main')), next={...current};
     for(const k of ['storeName','tagline','announcement','heroEyebrow','heroTitle','heroText','heroPrimary','heroSecondary','aboutTitle','aboutText','consultationTitle','consultationText','consultationIncludes','guideTitle','guideText','supportEmail','supportPhone','whatsapp','address','hours','seoDescription'])if(k in b)next[k]=str(b[k],k.endsWith('Text')||k==='consultationIncludes'?8000:1000);
     for(const k of ['heroImage','consultationImage','guideUrl'])if(k in b)next[k]=safeUrl(b[k],{localOnly:true});
-    const bundledHeroAssets={heroProductOne:'/assets/photos/hero-illiyoon-cutout.png',heroProductTwo:'/assets/photos/hero-korean-skin-cutout.png'};
+    const bundledHeroAssets={heroProductOne:'/assets/photos/hero-illiyoon-cutout.png',heroProductTwo:'/assets/photos/hero-korean-skin-cutout.png',heroProductThree:'/assets/photos/hero-cosrx-cutout.png',heroProductFour:'/assets/photos/hero-dove-cutout.png'};
     for(const [key,asset] of Object.entries(bundledHeroAssets))if(key in b)next[key]=b[key]===asset?asset:safeUrl(b[key],{localOnly:true});
     if('instagram' in b)next.instagram=safeUrl(b.instagram);
     if('supportEmail' in b&&b.supportEmail)next.supportEmail=email(b.supportEmail);

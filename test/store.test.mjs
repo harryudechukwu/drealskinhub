@@ -28,12 +28,15 @@ test('admin can curate and reorder homepage product sections',async()=>{
   const homeCollections=[{id:'best-sellers',title:'Best sellers',productIds:['body-lotion','daily-cleanser'],enabled:true}];
   const sectionOrder=['best-sellers',...keys];
   const heroProductOne='/assets/photos/hero-illiyoon-cutout.png',heroProductTwo='/assets/photos/hero-korean-skin-cutout.png';
-  const saved=await request('/api/admin/settings',{homeCollections,sectionOrder,heroProductOne,heroProductTwo},'PUT',adminCookie);
+  const heroProductThree='/assets/photos/hero-cosrx-cutout.png',heroProductFour='/assets/photos/hero-dove-cutout.png';
+  const saved=await request('/api/admin/settings',{homeCollections,sectionOrder,heroProductOne,heroProductTwo,heroProductThree,heroProductFour},'PUT',adminCookie);
   assert.equal(saved.status,200);
   assert.deepEqual(saved.data.homeCollections,homeCollections);
   assert.deepEqual(saved.data.sectionOrder,sectionOrder);
   assert.equal(saved.data.heroProductOne,heroProductOne);
   assert.equal(saved.data.heroProductTwo,heroProductTwo);
+  assert.equal(saved.data.heroProductThree,heroProductThree);
+  assert.equal(saved.data.heroProductFour,heroProductFour);
   const storefront=(await request('/api/store')).data.settings;
   assert.deepEqual(storefront.homeCollections,homeCollections);
   assert.deepEqual(storefront.sectionOrder,sectionOrder);

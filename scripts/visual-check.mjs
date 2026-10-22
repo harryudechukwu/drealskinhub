@@ -174,7 +174,7 @@ try{
           const newsletter=document.querySelector('.newsletter-inner'),n=newsletter.getBoundingClientRect(),ns=getComputedStyle(newsletter);
           return {contentLeft:r.left+parseFloat(style.paddingLeft),contentRight:r.right-parseFloat(style.paddingRight),stage:bounds('.hero-stage'),values:bounds('.values-inner'),consultation:bounds('.consultation-banner'),guide:bounds('.guide-section'),newsletter:{left:n.left+parseFloat(ns.paddingLeft),right:n.right-parseFloat(ns.paddingRight)},footer:bounds('.footer-top'),caption:document.querySelector('.hero-photo-caption')?.textContent.trim()};
         })()`);
-        if(!await evaluate("[...document.querySelectorAll('.hero-cutout')].length===2 && [...document.querySelectorAll('.hero-cutout')].every(img=>img.complete&&img.naturalWidth>0)"))throw new Error('The two hero product cutouts did not load.');
+        if(!await evaluate("[...document.querySelectorAll('.hero-cutout')].length===4 && [...document.querySelectorAll('.hero-cutout')].every(img=>img.complete&&img.naturalWidth>0)"))throw new Error('The four hero product cutouts did not load.');
         if(Math.abs(hero.textLeft-spacing.contentLeft)>2)throw new Error(`Hero text does not align with section content: ${JSON.stringify({hero,spacing})}`);
         for(const name of ['stage','values','consultation','guide','newsletter','footer']){
           const edges=spacing[name];
