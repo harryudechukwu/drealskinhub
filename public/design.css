@@ -616,8 +616,11 @@ p { text-wrap: pretty; }
   .guide-copy > p { font-size: 16px; }
   .guide-copy .form-row { grid-template-columns: 1fr; gap: 0; }
   .guide-copy .button { width: 100%; }
-  .journal-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .journal-art { aspect-ratio: 4 / 4.7; min-height: 0; }
+  .journal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .journal-art { aspect-ratio: 3 / 4.5; min-height: 0; border-radius: 12px; }
+  .journal-overlay { gap: 12px; padding: clamp(12px, 2.8vw, 18px); }
+  .journal-overlay h3 { font-size: clamp(16px, 3.5vw, 23px); line-height: 1.16; }
+  .journal-meta { gap: 6px; font-size: 10px; }
   .newsletter-inner { padding: 40px var(--gutter); gap: 24px; }
   .newsletter-strip h2 { font-size: 36px; }
   .newsletter-strip p { font-size: 16px; }
@@ -740,10 +743,12 @@ p { text-wrap: pretty; }
   .brand small { font-size: 8px; }
   .hero h1 { font-size: 41px; }
   .hero-stage { min-height: 315px; }
-  .product-grid, .shop-results .product-grid { grid-template-columns: minmax(0, 1fr); }
-  .product-visual > a, .shop-results .product-visual > a { aspect-ratio: 4 / 5; }
-  .product-info h3 { font-size: 18px; }
+  .product-grid, .shop-results .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
+  .product-visual > a, .shop-results .product-visual > a { aspect-ratio: 3 / 4; }
+  .product-info h3 { font-size: 16px; }
   .product-info h3 { min-height: 0; }
+  .quick-add { min-height: 44px; padding: 8px 6px; gap: 3px; font-size: 13px; white-space: nowrap; }
+  .quick-add .icon { width: 12px; height: 12px; flex-shrink: 0; }
   .product-brand, .product-size { font-size: 13px; }
   .quick-add { font-size: 16px; }
   .section-heading h2, .guide-copy h2 { font-size: 34px; }
@@ -765,6 +770,9 @@ p { text-wrap: pretty; }
   .integration-row { align-items: flex-start; flex-direction: column; gap: 8px; }
   .editor-footer { padding: 14px; }
   .editor-footer .button { padding: 12px; gap: 8px; }
+}
+@media (max-width: 420px) {
+  .journal-action { font-size: 0; gap: 0; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .reveal-ready { opacity: 0; transform: translateY(16px); }

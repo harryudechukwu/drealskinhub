@@ -157,6 +157,11 @@ try{
         }
       }
       if(label==='home'){
+        if(width<=640){
+          const mobileGrids=await evaluate(`(()=>{const pair=selector=>{const items=[...document.querySelectorAll(selector)].slice(0,2).map(item=>item.getBoundingClientRect());return {sameRow:items.length===2&&Math.abs(items[0].top-items[1].top)<2,firstWidth:items[0]?.width,secondWidth:items[1]?.width};};return {products:pair('#home-products .product-card'),journal:pair('.journal-grid .journal-card')};})()`);
+          if(Object.values(mobileGrids).some(pair=>!pair.sameRow||pair.firstWidth<120||pair.secondWidth<120))throw new Error(`Product and journal cards should remain two per row at ${width}px: ${JSON.stringify(mobileGrids)}`);
+          if(width<=380){const action=await evaluate(`(()=>{const button=document.querySelector('#home-products .quick-add');return {height:button.getBoundingClientRect().height,scrollWidth:button.scrollWidth,clientWidth:button.clientWidth};})()`);if(action.height>48||action.scrollWidth>action.clientWidth+1)throw new Error(`Narrow product action does not fit on one line at ${width}px: ${JSON.stringify(action)}`);}
+        }
         const productText=await evaluate(`(()=>{const card=document.querySelector('#home-products .product-card'),box=selector=>card.querySelector(selector).getBoundingClientRect();return {brandToTitle:box('h3').top-box('.product-brand').bottom,titleToSize:box('.product-size').top-box('h3').bottom,sizeToPrice:box('.product-price').top-box('.product-size').bottom,fontLoaded:document.fonts.check('400 16px "DM Sans"')};})()`);
         if(!productText.fontLoaded||productText.brandToTitle>10||productText.titleToSize>10||productText.sizeToPrice>16)throw new Error(`Product card text is too spread out or DM Sans did not load at ${width}px: ${JSON.stringify(productText)}`);
         const hero=await evaluate(`(()=>{const r=document.querySelector('.hero').getBoundingClientRect(),t=document.querySelector('.hero-copy h1').getBoundingClientRect(),primary=document.querySelector('.hero-buttons .button').getBoundingClientRect(),secondary=document.querySelector('.hero-buttons .text-link').getBoundingClientRect(),copy=document.querySelector('.consultation-copy'),cta=copy.querySelector('.button'),style=getComputedStyle(copy);return {left:r.left,right:r.right,height:r.height,headerHeight:document.querySelector('#site-header').offsetHeight,contentWidth:document.documentElement.clientWidth,textLeft:t.left,secondStyle:getComputedStyle(document.querySelector('.hero-title-second')).fontStyle,primaryMiddle:(primary.top+primary.bottom)/2,secondaryMiddle:(secondary.top+secondary.bottom)/2,consultationButton:cta.getBoundingClientRect().width,consultationContent:copy.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),consultationIcons:copy.querySelectorAll('.check-list .icon circle').length,previewStrip:!!document.querySelector('.preview-strip')};})()`);
@@ -219,8 +224,9 @@ try{
           await evaluate("document.querySelector('.journal-grid').scrollIntoView({block:'start'})");
           await screenshot(`review-journal-${width}`);
         }
+        if(!heroOnly&&width===320){await evaluate("document.querySelector('.featured-section').scrollIntoView({block:'start'})");await screenshot('featured-320');}
       }
-      if(label==='shop'&&width===390)await screenshot('shop-390');
+      if(label==='shop'&&[390,320].includes(width))await screenshot(`shop-${width}`);
     }
   }
   if(!heroOnly){
