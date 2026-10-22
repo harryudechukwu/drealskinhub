@@ -1,0 +1,21 @@
+{
+  "name": "drealskinhub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DrealSkinhub storefront and admin for Netlify, Turso, and Sender, with offline SQLite development.",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "dev": "node --env-file-if-exists=.env --watch server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "test:visual": "node scripts/visual-check.mjs"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "@netlify/blobs": "^11.1.5"
+  }
+}

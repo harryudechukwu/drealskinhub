@@ -1,0 +1,7 @@
+data/
+.env
+*.log
+coverage/
+node_modules/
+.cache/
+.netlify/
