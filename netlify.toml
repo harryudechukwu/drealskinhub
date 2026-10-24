@@ -6,6 +6,8 @@
 [build.environment]
   NODE_VERSION = "24"
   NPM_FLAGS = "--omit=optional --ignore-scripts"
+  # A display name is public profile text, not an authentication secret.
+  SECRETS_SCAN_OMIT_KEYS = "ADMIN_NAME"
 
 [functions]
   node_bundler = "esbuild"

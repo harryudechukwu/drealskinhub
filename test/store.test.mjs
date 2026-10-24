@@ -16,7 +16,7 @@ after(async()=>{await app.close();assert.ok(resolve(folder).startsWith(resolve(t
 test('store exposes sample catalogue without private records or bank account details',async()=>{const r=await request('/api/store');assert.equal(r.status,200);assert.equal(r.data.products.length,8);assert.equal(r.data.mode,'bank-transfer');assert.equal(r.data.checkoutAvailable,true);assert.equal(r.data.settings.bankAccountNumber,undefined);assert.equal(r.data.users,undefined);assert.equal(r.data.orders,undefined);});
 test('admin setup is one-time, protected, and uses HttpOnly session cookies',async()=>{
   assert.equal((await request('/api/admin/dashboard')).status,401);
-  const r=await request('/api/setup',{name:'Store Owner',email:'owner@example.test',password:'a secure owner password'});assert.equal(r.status,200);adminCookie=r.cookie;assert.equal(r.data.user.role,'admin');assert.match(r.headers.get('set-cookie'),/HttpOnly; SameSite=Strict/);
+  const r=await request('/api/setup',{name:'Preview Admin',email:'owner@example.test',password:'a secure owner password'});assert.equal(r.status,200);adminCookie=r.cookie;assert.equal(r.data.user.role,'admin');assert.match(r.headers.get('set-cookie'),/HttpOnly; SameSite=Strict/);
   assert.equal((await request('/api/setup',{name:'Intruder',email:'intruder@example.test',password:'a secure intruder password'})).status,409);
   const row=await app.store.db.prepare('SELECT password FROM users WHERE email=?').get('owner@example.test');assert.notEqual(row.password,'a secure owner password');assert.equal(row.password.split(':')[1].length,128);
 });

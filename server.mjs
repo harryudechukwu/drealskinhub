@@ -40,7 +40,7 @@ export async function createApplication({databasePath=process.env.DATABASE_PATH|
   const store=await openDatabase(databasePath,databaseOptions), {db,get,all,put,remove,transaction}=store;
   const limits=new Map();
   const dummyPassword=passwordHash(randomBytes(24).toString('hex'));
-  const adminEnv=adminCredentialsEnv.ADMIN_EMAIL||adminCredentialsEnv.ADMIN_PASSWORD?{email:email(adminCredentialsEnv.ADMIN_EMAIL),password:strongPassword(adminCredentialsEnv.ADMIN_PASSWORD),name:str(adminCredentialsEnv.ADMIN_NAME||'Store Owner',100)}:null;
+  const adminEnv=adminCredentialsEnv.ADMIN_EMAIL||adminCredentialsEnv.ADMIN_PASSWORD?{email:email(adminCredentialsEnv.ADMIN_EMAIL),password:strongPassword(adminCredentialsEnv.ADMIN_PASSWORD),name:str(adminCredentialsEnv.ADMIN_NAME||'Administrator',100)}:null;
   if(adminEnv){
     await db.prepare('INSERT OR IGNORE INTO users VALUES(?,?,?,?,?,?)').run(randomUUID(),adminEnv.email,adminEnv.name,passwordHash(adminEnv.password),'admin',now());
     const existing=await db.prepare('SELECT * FROM users WHERE email=?').get(adminEnv.email);
