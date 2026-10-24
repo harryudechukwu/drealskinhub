@@ -11,7 +11,7 @@ const candidates=[process.env.VISUAL_BROWSER,'C:/Program Files/Google/Chrome/App
 let executable;
 for(const candidate of candidates){try{await access(candidate);executable=candidate;break;}catch{}}
 if(!executable)throw new Error('Set VISUAL_BROWSER to an installed Chromium browser. No browser is downloaded.');
-const app=await createApplication({databasePath:join(run,'test.sqlite'),uploadDir:join(run,'uploads'),databaseOptions:{url:null},sender:{enabled:false}});
+const app=await createApplication({databasePath:join(run,'test.sqlite'),uploadDir:join(run,'uploads'),databaseOptions:{url:null},sender:{enabled:false},paymentEnv:{BANK_NAME:'Visual Test Bank',BANK_ACCOUNT_NAME:'Isolated Visual Test',BANK_ACCOUNT_NUMBER:'1234567890'}});
 await new Promise(done=>app.server.listen(0,'127.0.0.1',done));
 const origin=`http://127.0.0.1:${app.server.address().port}`;
 const profile=join(run,'browser');
@@ -27,7 +27,7 @@ browser.on('error',error=>{launchError=error;});
 browser.stderr.on('data',chunk=>{browserLog=(browserLog+chunk).slice(-3000);});
 const delay=ms=>new Promise(done=>setTimeout(done,ms));
 let socket,command,session;
-const report={browser:executable,sizes:[],interactions:[],consoleErrors:[],networkErrors:[],screenshots:[],blockedExternal:0};
+const report={browser:executable,sizes:[],heroMetrics:[],interactions:[],consoleErrors:[],networkErrors:[],screenshots:[],blockedExternal:0};
 try{
   let port;
   for(let attempt=0;attempt<80;attempt++){
@@ -96,8 +96,10 @@ try{
     if(breadcrumb&&(!breadcrumb.current||breadcrumb.label!=='Breadcrumb'||breadcrumb.homeRadius<15||!breadcrumb.separator))throw new Error(`Breadcrumb is inconsistent on ${label} at ${width}px: ${JSON.stringify(breadcrumb)}`);
   };
   const sizes=[[1900,900],[1440,900],[1024,768],[768,1024],[390,844],[320,740]];
-  const heroOnly=process.argv.includes('--hero');
-  for(const [width,height]of process.argv.includes('--focused')?[]:sizes){
+  const heroMetricsOnly=process.argv.includes('--hero-metrics');
+  const heroOnly=process.argv.includes('--hero')||heroMetricsOnly;
+  const reviewSizes=heroMetricsOnly?[...sizes,[390,667],[320,568],[667,375],[844,390]]:sizes;
+  for(const [width,height]of process.argv.includes('--focused')?[]:reviewSizes){
     await viewport(width,height);
     for(const [label,path,ready]of heroOnly?[['home','/',"!!document.querySelector('.hero')"]]:[
       ['home','/',"!!document.querySelector('.hero')"],
@@ -110,7 +112,16 @@ try{
       ['guide','/guide',"!!document.querySelector('.guide-section')"],
       ['admin-setup','/admin',"!!document.querySelector('.admin-auth')"]
     ]){
-      await navigate(path,ready);await inspect(label,width,height);
+      await navigate(path,ready);
+      if(heroMetricsOnly){
+        await evaluate('document.fonts.ready.then(()=>true)');
+        const metrics=await evaluate(`(()=>{const box=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height}};return {header:box('#site-header'),hero:box('.hero'),inner:box('.hero-inner'),copy:box('.hero-copy'),stage:box('.hero-stage'),shape:box('.hero-quatrefoil'),heading:document.querySelector('.hero-copy h1').textContent.trim(),heroActions:document.querySelector('.hero-copy .hero-buttons').children.length};})()`);
+        report.heroMetrics.push({width,height,...metrics});
+        console.log(JSON.stringify({width,height,header:metrics.header.height,hero:metrics.hero.height,heroBottom:metrics.hero.bottom,copyBottom:metrics.copy.bottom,stageBottom:metrics.stage.bottom,shape:metrics.shape.height}));
+        if(Math.abs(metrics.header.height+metrics.hero.height-height)>1||Math.abs(metrics.inner.height-metrics.hero.height)>1||Math.abs(metrics.hero.top-metrics.header.bottom)>1||Math.abs(metrics.hero.bottom-height)>1||metrics.copy.bottom>metrics.hero.bottom+1||metrics.stage.bottom>metrics.hero.bottom+1||metrics.shape.top<metrics.stage.top-1||metrics.shape.bottom>metrics.stage.bottom+1||metrics.shape.height<200||metrics.heading!=='A little care. A lot of confidence.'||metrics.heroActions!==1)throw new Error(`Header and hero do not fit the ${width}×${height} viewport: ${JSON.stringify(metrics)}`);
+        continue;
+      }
+      await inspect(label,width,height);
       if(label==='product'){
         const alignment=await evaluate(`(()=>{const page=document.querySelector('.page-wrap'),style=getComputedStyle(page),bounds=selector=>document.querySelector(selector).getBoundingClientRect();return {expectedLeft:page.getBoundingClientRect().left+parseFloat(style.paddingLeft),expectedRight:page.getBoundingClientRect().right-parseFloat(style.paddingRight),headingLeft:bounds('.related-section h2').left,gridLeft:bounds('.related-section .product-grid').left,gridRight:bounds('.related-section .product-grid').right};})()`);
         if(Math.abs(alignment.headingLeft-alignment.expectedLeft)>2||Math.abs(alignment.gridLeft-alignment.expectedLeft)>2||Math.abs(alignment.gridRight-alignment.expectedRight)>2)throw new Error(`Related products do not share the product page gutters at ${width}px: ${JSON.stringify(alignment)}`);
@@ -164,9 +175,8 @@ try{
         }
         const productText=await evaluate(`(()=>{const card=document.querySelector('#home-products .product-card'),box=selector=>card.querySelector(selector).getBoundingClientRect();return {brandToTitle:box('h3').top-box('.product-brand').bottom,titleToSize:box('.product-size').top-box('h3').bottom,sizeToPrice:box('.product-price').top-box('.product-size').bottom,fontLoaded:document.fonts.check('400 16px "DM Sans"')};})()`);
         if(!productText.fontLoaded||productText.brandToTitle>10||productText.titleToSize>10||productText.sizeToPrice>16)throw new Error(`Product card text is too spread out or DM Sans did not load at ${width}px: ${JSON.stringify(productText)}`);
-        const hero=await evaluate(`(()=>{const r=document.querySelector('.hero').getBoundingClientRect(),t=document.querySelector('.hero-copy h1').getBoundingClientRect(),primary=document.querySelector('.hero-buttons .button').getBoundingClientRect(),secondary=document.querySelector('.hero-buttons .text-link').getBoundingClientRect(),copy=document.querySelector('.consultation-copy'),cta=copy.querySelector('.button'),style=getComputedStyle(copy);return {left:r.left,right:r.right,height:r.height,headerHeight:document.querySelector('#site-header').offsetHeight,contentWidth:document.documentElement.clientWidth,textLeft:t.left,secondStyle:getComputedStyle(document.querySelector('.hero-title-second')).fontStyle,primaryMiddle:(primary.top+primary.bottom)/2,secondaryMiddle:(secondary.top+secondary.bottom)/2,consultationButton:cta.getBoundingClientRect().width,consultationContent:copy.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),consultationIcons:copy.querySelectorAll('.check-list .icon circle').length,previewStrip:!!document.querySelector('.preview-strip')};})()`);
-        if(Math.abs(hero.left)>1||Math.abs(hero.right-hero.contentWidth)>1||hero.height<height-1||hero.secondStyle!=='normal'||hero.previewStrip)throw new Error(`Hero sizing or heading is inconsistent at ${width}px: ${JSON.stringify(hero)}`);
-        if(width>=1440&&Math.abs(hero.primaryMiddle-hero.secondaryMiddle)>2)throw new Error(`Hero actions do not align at ${width}px: ${JSON.stringify(hero)}`);
+        const hero=await evaluate(`(()=>{const r=document.querySelector('.hero').getBoundingClientRect(),t=document.querySelector('.hero-copy h1').getBoundingClientRect(),copy=document.querySelector('.consultation-copy'),cta=copy.querySelector('.button'),style=getComputedStyle(copy);return {left:r.left,right:r.right,height:r.height,headerHeight:document.querySelector('#site-header').offsetHeight,contentWidth:document.documentElement.clientWidth,textLeft:t.left,heading:document.querySelector('.hero-copy h1').textContent.trim(),secondStyle:getComputedStyle(document.querySelector('.hero-title-second')).fontStyle,heroActions:document.querySelector('.hero-copy .hero-buttons').children.length,consultationButton:cta.getBoundingClientRect().width,consultationContent:copy.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),consultationIcons:copy.querySelectorAll('.check-list .icon circle').length,previewStrip:!!document.querySelector('.preview-strip')};})()`);
+        if(Math.abs(hero.left)>1||Math.abs(hero.right-hero.contentWidth)>1||Math.abs(hero.height+hero.headerHeight-height)>1||hero.heading!=='A little care. A lot of confidence.'||hero.secondStyle!=='normal'||hero.heroActions!==1||hero.previewStrip)throw new Error(`Hero sizing, copy, or actions are inconsistent at ${width}px: ${JSON.stringify(hero)}`);
         if(hero.consultationIcons<3||hero.consultationButton<hero.consultationContent-2)throw new Error(`Consultation list or full-width action is inconsistent at ${width}px: ${JSON.stringify(hero)}`);
         const spacing=await evaluate(`(()=>{
           const bounds=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {left:r.left,right:r.right};};
@@ -174,7 +184,7 @@ try{
           const newsletter=document.querySelector('.newsletter-inner'),n=newsletter.getBoundingClientRect(),ns=getComputedStyle(newsletter);
           return {contentLeft:r.left+parseFloat(style.paddingLeft),contentRight:r.right-parseFloat(style.paddingRight),stage:bounds('.hero-stage'),values:bounds('.values-inner'),consultation:bounds('.consultation-banner'),guide:bounds('.guide-section'),newsletter:{left:n.left+parseFloat(ns.paddingLeft),right:n.right-parseFloat(ns.paddingRight)},footer:bounds('.footer-top'),caption:document.querySelector('.hero-photo-caption')?.textContent.trim()};
         })()`);
-        if(!await evaluate("[...document.querySelectorAll('.hero-cutout')].length===4 && [...document.querySelectorAll('.hero-cutout')].every(img=>img.complete&&img.naturalWidth>0)"))throw new Error('The four hero product cutouts did not load.');
+        if(!await evaluate("[...document.querySelectorAll('.hero-quatrefoil-product')].length===4 && [...document.querySelectorAll('.hero-quatrefoil-product')].every(img=>img.complete&&img.naturalWidth>0)"))throw new Error('The four hero product cutouts did not load.');
         if(Math.abs(hero.textLeft-spacing.contentLeft)>2)throw new Error(`Hero text does not align with section content: ${JSON.stringify({hero,spacing})}`);
         for(const name of ['stage','values','consultation','guide','newsletter','footer']){
           const edges=spacing[name];
@@ -228,7 +238,7 @@ try{
       if(label==='shop'&&[390,320].includes(width))await screenshot(`shop-${width}`);
     }
   }
-  if(heroOnly){
+  if(heroOnly&&!heroMetricsOnly){
     await viewport(390,844);
     await navigate('/admin',"!!document.querySelector('.admin-auth')");
     const setup=await evaluate(`fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Visual Reviewer',email:'visual-admin@example.test',password:'Isolated visual check only 2026'})}).then(r=>r.json())`);
@@ -288,14 +298,14 @@ try{
   await click('[data-action=add-detail]');await click('[data-action=cart]');await waitFor("!!document.querySelector('#cart-dialog[open]')");
   await inspect('cart',390,844);await screenshot('cart-390');
   await viewport(320,740);await inspect('cart',320,740);await viewport(390,844);
-  await click('#cart-dialog a[href="/checkout"]');await waitFor("!!document.querySelector('#checkout-totals .grand-total')");
-  await inspect('checkout',390,844);await evaluate("document.querySelector('#toast').classList.remove('show')");await screenshot('checkout-390');
-  await evaluate(`(()=>{const f=document.querySelector('#checkout-form');for(const [key,value]of Object.entries({name:'Visual Test',email:'visual@example.test',phone:'08000000000',address:'Fictional address',city:'Lagos'}))f.elements.namedItem(key).value=value;f.elements.namedItem('previewAcknowledged').checked=true;f.requestSubmit();})()`);
-  await waitFor("!!document.querySelector('.confirmation')");
-  report.interactions.push('Mobile add-to-bag and preview checkout completed through the UI.');
-  await navigate('/admin',"!!document.querySelector('.admin-auth')");
   const setup=await evaluate(`fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Visual Reviewer',email:'visual-admin@example.test',password:'Isolated visual check only 2026'})}).then(r=>r.json())`);
   if(!setup.user)throw new Error('Isolated admin setup failed: '+JSON.stringify(setup));
+  await click('#cart-dialog a[href="/checkout"]');await waitFor("!!document.querySelector('#checkout-totals .grand-total')");
+  await inspect('checkout',390,844);await evaluate("document.querySelector('#toast').classList.remove('show')");await screenshot('checkout-390');
+  await evaluate(`(()=>{const f=document.querySelector('#checkout-form');for(const [key,value]of Object.entries({name:'Visual Test',email:'visual@example.test',phone:'08000000000',address:'Fictional address',city:'Lagos'}))f.elements.namedItem(key).value=value;f.elements.namedItem('contactChannel').value='email';f.elements.namedItem('transferAcknowledged').checked=true;f.requestSubmit();})()`);
+  await waitFor("!!document.querySelector('.bank-card')");
+  report.interactions.push('Mobile add-to-bag and bank-transfer instructions completed through the UI.');
+  await navigate('/admin',"!!document.querySelector('.stats-grid')");
   for(const [width,height]of sizes){
     await viewport(width,height);
     for(const [label,path,ready]of [

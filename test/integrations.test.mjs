@@ -54,3 +54,20 @@ test('Netlify wrapper fails safely without credentials and supports secured admi
     const response=await handler(makeRequest(process.env.ADMIN_SETUP_TOKEN),{ip:'203.0.113.1'});assert.equal(response.status,200);assert.match(response.headers.get('set-cookie'),/Secure/);assert.equal((await response.json()).user.role,'admin');
   }finally{app.store.db.close();if(previous===undefined)delete process.env.ADMIN_SETUP_TOKEN;else process.env.ADMIN_SETUP_TOKEN=previous;}
 });
+
+test('hosted checkout needs owner push but not Gmail',async()=>{
+  const mock=remoteDriverDouble();
+  const app=await createApplication({hosted:true,databaseOptions:{client:mock.client},sender:{enabled:false},mailer:{canSend:false},cloudinary:{configured:true},push:{configured:true,publicKey:'test',validateEndpoint:value=>value,send:async()=>({expired:false})},paymentEnv:{BANK_NAME:'Example Bank',BANK_ACCOUNT_NAME:'DrealSkinhub Limited',BANK_ACCOUNT_NUMBER:'1234567890'},adminCredentialsEnv:{ADMIN_EMAIL:'owner@example.test',ADMIN_PASSWORD:'a secure admin password'}});
+  try{
+    const origin='https://preview.example.test',handler=createNetlifyHandler({env:{TURSO_DATABASE_URL:'test-only',TURSO_AUTH_TOKEN:'test-only'},createApp:async()=>app});
+    const before=await handler(new Request(origin+'/api/store'),{ip:'203.0.113.1'});
+    assert.equal((await before.json()).checkoutAvailable,false);
+    const login=await handler(new Request(origin+'/api/auth/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({email:'owner@example.test',password:'a secure admin password'})}),{ip:'203.0.113.1'});
+    assert.equal(login.status,200);
+    const cookie=login.headers.get('set-cookie').split(';')[0];
+    const subscribe=await handler(new Request(origin+'/api/admin/push/subscribe',{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({endpoint:'https://fcm.googleapis.com/fcm/send/admin-device'})}),{ip:'203.0.113.1'});
+    assert.equal(subscribe.status,200);
+    const after=await handler(new Request(origin+'/api/store'),{ip:'203.0.113.1'});
+    assert.equal((await after.json()).checkoutAvailable,true);
+  }finally{app.store.db.close();}
+});

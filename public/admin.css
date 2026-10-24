@@ -1,4 +1,15 @@
 .admin-body{background:#f8f7f4;font-size:var(--text-small)}
+.push-card{margin-top:24px}
+.push-card>p{max-width:660px;margin:0 0 18px;color:var(--muted)}
+.push-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.push-card #push-status{margin:14px 0 0}
+.manual-message{margin-top:28px;padding:22px;background:var(--cream);border-radius:8px}
+.manual-message h3{margin-top:0}
+.manual-message-draft{display:grid;gap:13px;margin-top:18px}
+.manual-message-draft .field{margin:0}
+.manual-message-draft textarea{resize:vertical;min-height:170px}
+.manual-message-actions{display:flex;gap:10px;flex-wrap:wrap}
+.manual-message-actions .button{min-height:43px}
 .admin-sidebar{width:242px;position:fixed;inset:0 auto 0 0;background:#fff;border-right:1px solid var(--line);z-index:40;padding:28px 18px 0;display:flex;flex-direction:column}
 .admin-brand{display:flex;align-items:center;gap:8px;color:var(--wine);margin:0 4px 28px}
 .admin-brand img{width:45px;height:45px;border-radius:50%}
@@ -131,10 +142,16 @@
 .settings-form .field>span,.editor-form .field>span{font-size:var(--text-small)}
 .settings-form .field input,.settings-form .field select,.settings-form .field textarea,.editor-form .field input,.editor-form .field select,.editor-form .field textarea{font-size:var(--text-input);padding:11px 12px}
 .settings-form .field,.editor-form .field{margin-bottom:20px}
+.settings-form textarea[name="categoryPaths"]{min-height:240px;line-height:1.7}
 .form-help{font-size:var(--text-caption);color:#978779;line-height:1.9;margin:-8px 0 23px}
 .settings-form hr,.editor-form hr{height:1px;background:var(--line);border:0;margin:30px 0}
 .checkbox-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
 .checkbox-grid .check{font-size:var(--text-small);margin:8px 0}
+.visibility-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:24px 0}
+.visibility-group{min-width:0;margin:0;padding:18px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.visibility-group legend{padding:0 6px;color:var(--wine);font:20px var(--serif)}
+.visibility-options{display:grid;gap:4px}
+.visibility-options .check{display:flex;align-items:center;min-height:36px;margin:0;font-size:var(--text-small)}
 .form-footer{display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--line);margin-top:30px;padding-top:23px}
 .form-footer>span{font-size:var(--text-caption);color:#ad9b8c}
 .form-footer .button{padding:12px 18px;font-size:var(--text-control);min-height:43px;gap:13px;flex-shrink:0}

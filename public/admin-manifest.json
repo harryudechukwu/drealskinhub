@@ -1,0 +1,10 @@
+{
+  "name": "DrealSkinhub Store Admin",
+  "short_name": "DrealSkinhub",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fcfaf5",
+  "theme_color": "#5f051c",
+  "icons": [{"src":"/assets/logo.jpeg","sizes":"any","type":"image/jpeg"}]
+}
