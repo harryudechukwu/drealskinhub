@@ -65,9 +65,16 @@ test('hosted checkout needs owner push but not Gmail',async()=>{
     const login=await handler(new Request(origin+'/api/auth/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({email:'owner@example.test',password:'a secure admin password'})}),{ip:'203.0.113.1'});
     assert.equal(login.status,200);
     const cookie=login.headers.get('set-cookie').split(';')[0];
+    const setup=await handler(new Request(origin+'/api/admin/dashboard',{headers:{Cookie:cookie}}),{ip:'203.0.113.1'});
+    const setupStatus=(await setup.json()).integrationStatus;
+    assert.equal(setupStatus.checkoutReady,false);
+    assert.equal(setupStatus.payments,'Enable push on an admin device');
+    assert.match(setupStatus.cloudinary,/Configured/);
     const subscribe=await handler(new Request(origin+'/api/admin/push/subscribe',{method:'POST',headers:{Origin:origin,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({endpoint:'https://fcm.googleapis.com/fcm/send/admin-device'})}),{ip:'203.0.113.1'});
     assert.equal(subscribe.status,200);
     const after=await handler(new Request(origin+'/api/store'),{ip:'203.0.113.1'});
     assert.equal((await after.json()).checkoutAvailable,true);
+    const connected=await handler(new Request(origin+'/api/admin/dashboard',{headers:{Cookie:cookie}}),{ip:'203.0.113.1'});
+    assert.equal((await connected.json()).integrationStatus.checkoutReady,true);
   }finally{app.store.db.close();}
 });
