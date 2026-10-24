@@ -325,7 +325,11 @@ export async function createApplication({databasePath=process.env.DATABASE_PATH|
       if(!contactMatches(order,b.contact))fail('Verify your preferred contact before uploading a receipt.',403);
       let image;try{image=proofImage(b.data,b.type);}catch(error){fail(error.message);}
       const filename=`${randomUUID()}.${image.ext}`;
-      const privateAsset=cloudinary.configured?await cloudinary.upload(image.bytes,b.type,{privateAsset:true}):null;
+      let privateAsset=null;
+      if(cloudinary.configured){
+        try{privateAsset=await cloudinary.upload(image.bytes,b.type,{privateAsset:true});}
+        catch(error){console.error('Payment receipt storage failed:',error.message);fail('Receipt upload is temporarily unavailable. Your order is saved; please try again shortly.',503);}
+      }
       if(!privateAsset){if(hosted)fail('Private image storage is not configured.',503);await proofMedia.put(filename,image.bytes,b.type);}
       const updated=await transaction(async()=>{
         const current=await get('orders',id);

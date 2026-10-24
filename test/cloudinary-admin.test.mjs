@@ -12,7 +12,7 @@ test('Cloudinary sends public products and private proofs through server credent
   const adapter=createCloudinary({env:{CLOUDINARY_CLOUD_NAME:cloud,CLOUDINARY_API_KEY:'key',CLOUDINARY_API_SECRET:'secret'},fetchImpl:async(url,options)=>{
     requests.push({url,options});
     if(url.includes('/asset/download'))return new Response(new Uint8Array([255,216,255,0]));
-    const privateAsset=url.endsWith('/image/authenticated');
+    const privateAsset=options.body.get('type')==='authenticated';
     return Response.json({asset_id:assetId,secure_url:`https://res.cloudinary.com/${cloud}/image/${privateAsset?'authenticated':'upload'}/v1/drealskinhub/test.jpg`});
   }});
   const publicAsset=await adapter.upload(Buffer.from([255,216,255,0]),'image/jpeg');
@@ -21,8 +21,9 @@ test('Cloudinary sends public products and private proofs through server credent
   assert.equal(adapter.ownsPublicUrl(proof.url),false);
   assert.equal(adapter.ownsPublicUrl('https://other.example/image.jpg'),false);
   assert.match(requests[0].url,/\/image\/upload$/);
-  assert.match(requests[1].url,/\/image\/authenticated$/);
-  assert.equal(requests[1].options.body.has('type'),false);
+  assert.match(requests[1].url,/\/image\/upload$/);
+  assert.equal(requests[1].options.body.get('type'),'authenticated');
+  assert.equal(requests[0].options.body.has('type'),false);
   assert.equal(requests[0].options.headers.Authorization,`Basic ${Buffer.from('key:secret').toString('base64')}`);
   assert.deepEqual(await adapter.download(assetId),Buffer.from([255,216,255,0]));
   const download=new URL(requests[2].url),query=download.searchParams;

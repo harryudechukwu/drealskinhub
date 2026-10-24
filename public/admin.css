@@ -1,5 +1,7 @@
 .admin-body{background:#f8f7f4;font-size:var(--text-small)}
-.push-card{margin-top:24px}
+.push-card{margin-top:24px;padding:24px}
+.dashboard-receipts{margin-bottom:24px}
+.push-card .card-heading{padding:0 0 16px}
 .push-card>p{max-width:660px;margin:0 0 18px;color:var(--muted)}
 .push-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .push-card #push-status{margin:14px 0 0}
@@ -41,6 +43,7 @@
 .admin-topbar strong{font-weight:500}
 .admin-topbar>div{display:flex;align-items:center;gap:25px}
 .admin-preview{font-size:var(--text-caption);color:#68732c;background:#f3f3e7;padding:5px 10px;border-radius:20px}
+.admin-preview.is-paused{color:#93652e;background:#f8eddf}
 .admin-topbar .text-link{font-size:var(--text-control);border:0}
 .admin-topbar .text-link .icon{width:13px}
 .admin-menu{display:none}
@@ -376,6 +379,7 @@
 }
 
 @media(max-width:420px){#admin-main{padding:25px 5% 40px}
+.push-card{padding:18px}
 .admin-page-heading h1{font-size:31px}
 .admin-page-heading .eyebrow{font-size:var(--text-caption)}
 .stat-card{padding:15px}

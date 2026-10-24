@@ -57,7 +57,9 @@ test('Netlify wrapper fails safely without credentials and supports secured admi
 
 test('hosted checkout needs owner push but not Gmail',async()=>{
   const mock=remoteDriverDouble();
-  const app=await createApplication({hosted:true,databaseOptions:{client:mock.client},sender:{enabled:false},mailer:{canSend:false},cloudinary:{configured:true},push:{configured:true,publicKey:'test',validateEndpoint:value=>value,send:async()=>({expired:false})},paymentEnv:{BANK_NAME:'Example Bank',BANK_ACCOUNT_NAME:'DrealSkinhub Limited',BANK_ACCOUNT_NUMBER:'1234567890'},adminCredentialsEnv:{ADMIN_EMAIL:'owner@example.test',ADMIN_PASSWORD:'a secure admin password'}});
+  let storageAvailable=false;
+  const cloudinary={configured:true,upload:async()=>{if(!storageAvailable)throw new Error('Storage unavailable');return {assetId:'receipt-asset-id',url:'https://res.cloudinary.com/test/image/authenticated/v1/proof.png'};},download:async()=>Buffer.from('proof')};
+  const app=await createApplication({hosted:true,databaseOptions:{client:mock.client},sender:{enabled:false},mailer:{canSend:false},cloudinary,push:{configured:true,publicKey:'test',validateEndpoint:value=>value,send:async()=>({expired:false})},paymentEnv:{BANK_NAME:'Example Bank',BANK_ACCOUNT_NAME:'DrealSkinhub Limited',BANK_ACCOUNT_NUMBER:'1234567890'},adminCredentialsEnv:{ADMIN_EMAIL:'owner@example.test',ADMIN_PASSWORD:'a secure admin password'}});
   try{
     const origin='https://preview.example.test',handler=createNetlifyHandler({env:{TURSO_DATABASE_URL:'test-only',TURSO_AUTH_TOKEN:'test-only'},createApp:async()=>app});
     const before=await handler(new Request(origin+'/api/store'),{ip:'203.0.113.1'});
@@ -76,5 +78,25 @@ test('hosted checkout needs owner push but not Gmail',async()=>{
     assert.equal((await after.json()).checkoutAvailable,true);
     const connected=await handler(new Request(origin+'/api/admin/dashboard',{headers:{Cookie:cookie}}),{ip:'203.0.113.1'});
     assert.equal((await connected.json()).integrationStatus.checkoutReady,true);
+    const post=(path,body,sessionCookie='')=>handler(new Request(origin+path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...(sessionCookie?{Cookie:sessionCookie}:{})},body:JSON.stringify(body)}),{ip:'203.0.113.1'});
+    const items=[{id:'hydration-serum',quantity:1}],quote=await post('/api/quote',{items,zone:'lagos'});
+    const {total}=await quote.json();
+    const placed=await post('/api/orders',{items,zone:'lagos',name:'Receipt Customer',email:'receipt@example.test',phone:'08000000000',address:'Test street',city:'Lagos',contactChannel:'email',transferAcknowledged:true,idempotencyKey:'hosted-receipt-flow',expectedTotal:total});
+    assert.equal(placed.status,200);
+    const {order,accessToken}=await placed.json();
+    const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlZ5XcAAAAASUVORK5CYII=';
+    const unavailable=await post(`/api/orders/${order.id}/proof`,{accessToken,contact:'receipt@example.test',type:'image/png',data:png});
+    assert.equal(unavailable.status,503);
+    assert.match((await unavailable.json()).error,/order is saved/i);
+    assert.equal((await app.store.get('orders',order.id)).paymentStatus,'awaiting_transfer');
+    storageAvailable=true;
+    const submitted=await post(`/api/orders/${order.id}/proof`,{accessToken,contact:'receipt@example.test',type:'image/png',data:png});
+    assert.equal(submitted.status,200);
+    assert.equal((await submitted.json()).order.paymentStatus,'proof_submitted');
+    const confirmed=await post(`/api/admin/orders/${order.id}/confirm-payment`,{verified:true,bankReference:'BANK-123',verifiedAmount:total},cookie);
+    assert.equal(confirmed.status,200);
+    const receipt=await handler(new Request(origin+`/api/admin/orders/${order.id}/receipt`,{headers:{Cookie:cookie}}),{ip:'203.0.113.1'});
+    assert.equal(receipt.status,200);
+    assert.match(Buffer.from((await receipt.json()).data,'base64').toString('ascii',0,8),/^%PDF-1\.4/);
   }finally{app.store.db.close();}
 });
